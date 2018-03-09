@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QProcess>
 #include <QDebug>
+#include <QSettings>
 
 namespace Ui {
 class MainWindow;
@@ -14,6 +15,7 @@ class MainWindow : public QMainWindow{
 
 public:
     explicit MainWindow(QWidget *parent = 0);
+    void evExitStatus(QProcess::ExitStatus error);
     ~MainWindow();
 
 public slots:

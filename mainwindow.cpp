@@ -6,9 +6,9 @@
     #include <windows.h>
     #include <shellapi.h>
 #endif
-QString exeFileName = "\"D:\\Engineering\\Repository WORK\\JTWStatic\\JTW.exe\"";
+QString exeFileName = "\"D:\\Engineering\\JTWStaticTest\\JTWcrash.exe\"";
 //QString exeFileName = "D:/Engineering/Repository WORK/JTWStatic/JTW.exe";
-QString exePath = "D:/Engineering/Repository WORK/JTWStatic";
+QString exePath = "D:/Engineering/JTWStaticTest";
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow){
 
@@ -29,27 +29,27 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     }
 #endif
 */
+
     QProcess *myProcess = new QProcess(parent);
     connect(myProcess, SIGNAL(error(QProcess::ProcessError)),this, SLOT(slotProcessError(QProcess::ProcessError)));
     connect(myProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [=](int exitCode, QProcess::ExitStatus exitStatus){ qDebug() << exitStatus; });
- /*
-    {
+        [=](int exitCode, QProcess::ExitStatus exitStatus){ evExitStatus(exitStatus); });
 
-        switch (exitStatus) {
-            case QProcess::NormalExit :
-                qDebug() << "NormalExit";
-                break;
-            case QProcess::CrashExit :
-                qDebug() << "CrashExit";
-                break;
-        }));*/
+    // DISABLE WINDOWS ERROR DIALOG
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting", QSettings::NativeFormat);
+    settings.setValue("DontShowUI", 1);
+
     myProcess->setWorkingDirectory(exePath);
     myProcess->start(exeFileName);
 
 }
 
 MainWindow::~MainWindow(){
+
+    // ENABLE WINDOWS ERROR DIALOG
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting", QSettings::NativeFormat);
+    settings.setValue("DontShowUI", 0);
+
     delete ui;
 }
 
@@ -74,4 +74,17 @@ void MainWindow::slotProcessError(QProcess::ProcessError error){
             qDebug() << "UnknownError";
             break;
     }
+}
+
+void MainWindow::evExitStatus(QProcess::ExitStatus exitStatus){
+    //qDebug() << exitStatus;
+    switch (exitStatus) {
+        case QProcess::NormalExit :
+            qDebug() << "Normal...Exit";
+            break;
+        case QProcess::CrashExit :
+            qDebug() << "Crash...Exit";
+            break;
+    }
+
 }
