@@ -2,14 +2,6 @@
 #include "ui_mainwindow.h"
 
 
-#ifdef Q_OS_WIN
-    #include <windows.h>
-    #include <shellapi.h>
-#endif
-QString exeFileName = "\"D:\\Engineering\\JTWStaticTest\\JTWcrash.exe\"";
-//QString exeFileName = "D:/Engineering/Repository WORK/JTWStatic/JTW.exe";
-QString exePath = "D:/Engineering/JTWStaticTest";
-
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow){
 
     ui->setupUi(this);
@@ -39,8 +31,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting", QSettings::NativeFormat);
     settings.setValue("DontShowUI", 1);
 
-    myProcess->setWorkingDirectory(exePath);
-    myProcess->start(exeFileName);
+    //myProcess->setWorkingDirectory(exePath);
+    //myProcess->start(exeFileName);
+
+    //QStringList args = {};
+    //myProcess->startDetached(exeFileName,args,exePath);
+
+    connect(&checkTimer, SIGNAL(timeout()),this, SLOT(checkProcessStatus()));
+
+    checkTimer.start(timerPeriod);
+
+
 
 }
 
@@ -87,4 +88,32 @@ void MainWindow::evExitStatus(QProcess::ExitStatus exitStatus){
             break;
     }
 
+}
+
+void MainWindow::checkProcessStatus(){
+
+    QProcess process;
+    process.setReadChannel(QProcess::StandardOutput);
+    process.setReadChannelMode(QProcess::MergedChannels);
+    process.start("wmic.exe /OUTPUT:STDOUT PROCESS get Caption");
+
+    process.waitForStarted(100);
+    process.waitForFinished(500);
+
+    QByteArray result = process.readAll();
+    //qDebug() << "Read" << list.length() << "bytes"; qDebug() << list;
+    QList<QByteArray> lines = result.split('\n');
+    QList<QString> strLines;
+
+    bool exeFound = false;
+    for (int i=0; i<lines.size(); i++) {
+        strLines.append(QString(lines[i].constData()));
+        //qDebug() << strLines[i];
+        if (strLines[i].indexOf(processName)>=0 && !exeFound)
+            exeFound =true;
+    }
+    if (exeFound)
+        qDebug() << processName << "running";
+    else
+        qDebug() << processName << "not running";
 }
