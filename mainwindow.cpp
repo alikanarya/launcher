@@ -5,37 +5,35 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow){
 
     ui->setupUi(this);
-/*
-#ifdef Q_OS_WIN
-    int result = (int)::ShellExecuteA(0, "open", exeFileName.toUtf8().constData(), 0, 0, SW_SHOWNORMAL);
-    if (SE_ERR_ACCESSDENIED == result) {
-        result = (int)::ShellExecuteA(0, "runas", exeFileName.toUtf8().constData(), 0, 0, SW_SHOWNORMAL);
-    }
-    if (result <= 32) {
-        // error handling
-    }
-    qDebug() << result;
-#else
-    if (!QProcess::startDetached(exeFileName, exePath)) {
-        qDebug() << "error";
-    }
-#endif
-*/
-
+    /* START PROCESS WITHIN THIS APP WITH "WINDOWS SHELL COMMAND" IF THERE IS A PERMISSION ISSUE
+    #ifdef Q_OS_WIN
+        int result = (int)::ShellExecuteA(0, "open", exeFileName.toUtf8().constData(), 0, 0, SW_SHOWNORMAL);
+        if (SE_ERR_ACCESSDENIED == result) {
+            result = (int)::ShellExecuteA(0, "runas", exeFileName.toUtf8().constData(), 0, 0, SW_SHOWNORMAL);
+        }
+        if (result <= 32) { // error handling }
+        qDebug() << result;
+    #else
+        if (!QProcess::startDetached(exeFileName, exePath)) { qDebug() << "error"; }
+    #endif
+    */
+    /* START PROCESS WITHIN THIS APP WITH "QPROCESS"
     QProcess *myProcess = new QProcess(parent);
     connect(myProcess, SIGNAL(error(QProcess::ProcessError)),this, SLOT(slotProcessError(QProcess::ProcessError)));
     connect(myProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
         [=](int exitCode, QProcess::ExitStatus exitStatus){ evExitStatus(exitStatus); });
-
-    // DISABLE WINDOWS ERROR DIALOG
-    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting", QSettings::NativeFormat);
-    settings.setValue("DontShowUI", 1);
 
     //myProcess->setWorkingDirectory(exePath);
     //myProcess->start(exeFileName);
 
     //QStringList args = {};
     //myProcess->startDetached(exeFileName,args,exePath);
+    */
+
+    regCrashDialog(1);  // disable windows crash dialog
+
+    exeFoundStatePrev = false;
+    exeFoundState = false;
 
     connect(&checkTimer, SIGNAL(timeout()),this, SLOT(checkProcessStatus()));
 
@@ -47,11 +45,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
 MainWindow::~MainWindow(){
 
-    // ENABLE WINDOWS ERROR DIALOG
-    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting", QSettings::NativeFormat);
-    settings.setValue("DontShowUI", 0);
-
+    regCrashDialog(0);  // enable windows crash dialog
     delete ui;
+}
+
+void MainWindow::regCrashDialog(int value){
+
+    // value 0; enable dialog, 1: disable dialog
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting", QSettings::NativeFormat);
+    settings.setValue("DontShowUI", value);
 }
 
 void MainWindow::slotProcessError(QProcess::ProcessError error){
@@ -105,15 +107,22 @@ void MainWindow::checkProcessStatus(){
     QList<QByteArray> lines = result.split('\n');
     QList<QString> strLines;
 
-    bool exeFound = false;
+    bool lock = false;
+    exeFoundState = false;
     for (int i=0; i<lines.size(); i++) {
         strLines.append(QString(lines[i].constData()));
         //qDebug() << strLines[i];
-        if (strLines[i].indexOf(processName)>=0 && !exeFound)
-            exeFound =true;
+        if (strLines[i].indexOf(processName)>=0 && !lock){
+            exeFoundState = true;
+            lock = true;
+        }
     }
-    if (exeFound)
+    if (exeFoundState && !exeFoundStatePrev)
         qDebug() << processName << "running";
-    else
+
+    if (!exeFoundState && exeFoundStatePrev)
         qDebug() << processName << "not running";
+
+    if (exeFoundState != exeFoundStatePrev)
+        exeFoundStatePrev = exeFoundState;
 }

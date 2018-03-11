@@ -27,14 +27,18 @@ public:
     //QString exeFileName = "D:/Engineering/Repository WORK/JTWStatic/JTW.exe";
     QString exePath = "D:/Engineering/JTWStaticTest";
     QString processName = "JTW.exe";
+    bool exeFoundState, exeFoundStatePrev;
 
 
     QTimer checkTimer;
     int timerPeriod = 1000;
 
     explicit MainWindow(QWidget *parent = 0);
-    void evExitStatus(QProcess::ExitStatus error);
     ~MainWindow();
+
+    void regCrashDialog(int enable);
+
+    void evExitStatus(QProcess::ExitStatus error);
 
 public slots:
     void slotProcessError(QProcess::ProcessError error);
